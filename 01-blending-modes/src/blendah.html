@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script
+            src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"
+        ></script>
+        <title>Blendah</title>
+    </head>
+    <body class="flex h-screen">
+        <aside
+            class="h-full flex-shrink-0 flex-basis-[240px] max-w-[240px] bg-slate-50 border-r border-slate-200 p-4 overflow-y-auto z-50 flex flex-col"
+        >
+            <h2
+                class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4"
+            >
+                Assets
+            </h2>
+            <input
+                type="file"
+                id="imageUpload"
+                multiple
+                accept="image/*"
+                class="mb-6 block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
+            >
+            <div
+                id="sidebarItems"
+                class="flex flex-col flex-1 items-center gap-2 overflow-y-auto overflow-x-hidden pb-4"
+            >
+            </div>
+            <hr class="my-2 border-slate-200 border w-full">
+
+            <h2
+                class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-2 mt-4"
+            >
+                Blend Mode
+            </h2>
+            <form class="flex flex-col gap-2" id="blendForm">
+                <label
+                    class="inline-flex items-center text-xs text-slate-600 cursor-pointer"
+                >
+                    <input
+                        type="radio"
+                        name="blendMode"
+                        value="additive"
+                        class="mr-2 accent-indigo-600"
+                        checked
+                    >
+                    Additive
+                </label>
+                <label
+                    class="inline-flex items-center text-xs text-slate-600 cursor-pointer"
+                >
+                    <input
+                        type="radio"
+                        name="blendMode"
+                        value="screen"
+                        class="mr-2 accent-indigo-600"
+                    >
+                    Screen
+                </label>
+                <label
+                    class="inline-flex items-center text-xs text-slate-600 cursor-pointer"
+                >
+                    <input
+                        type="radio"
+                        name="blendMode"
+                        value="difference"
+                        class="mr-2 accent-indigo-600"
+                    >
+                    Difference
+                </label>
+                <label
+                    class="inline-flex items-center text-xs text-slate-600 cursor-pointer"
+                >
+                    <input
+                        type="radio"
+                        name="blendMode"
+                        value="alpha"
+                        class="mr-2 accent-indigo-600"
+                    >
+                    Alpha
+                </label>
+                <label
+                    class="inline-flex items-center text-xs text-slate-600 cursor-pointer"
+                >
+                    <input
+                        type="radio"
+                        name="blendMode"
+                        value="multiply"
+                        class="mr-2 accent-indigo-600"
+                    >
+                    Multiply
+                </label>
+                <button
+                    id="blendButton"
+                    type="submit"
+                    class="w-full mt-6 py-2 px-4 rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                >
+                    Blend
+                </button>
+            </form>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto p-4">
+            <canvas
+                id="canvas"
+                class="w-full h-full border border-slate-200 shadow-2xl"
+            ></canvas>
+        </main>
+        <script>
+            const uploadInput = document.getElementById(
+                "imageUpload",
+            );
+            const itemsContainer = document.getElementById(
+                "sidebarItems",
+            );
+
+            uploadInput.addEventListener("change", (e) => {
+                Array.from(e.target.files).forEach(
+                    (file, index) => {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const wrapper = document
+                                .createElement(
+                                    "div",
+                                );
+                            wrapper.className =
+                                "relative group cursor-grab active:cursor-grabbing";
+                            wrapper.draggable = true;
+
+                            const img = document.createElement(
+                                "img",
+                            );
+                            img.src = event.target.result;
+                            img.style.width = "200px";
+                            img.style.height = "auto";
+                            img.className =
+                                "rounded-md shadow-sm border border-slate-300 pointer-events-none";
+
+                            const deleteBtn = document
+                                .createElement("button");
+                            deleteBtn.innerHTML = "&times;";
+                            deleteBtn.className =
+                                "absolute -top-2 -right-2 bg-rose-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-md hover:bg-rose-600";
+                            deleteBtn.onclick = () =>
+                                wrapper.remove();
+
+                            wrapper.appendChild(img);
+                            wrapper.appendChild(deleteBtn);
+
+                            wrapper.addEventListener(
+                                "dragstart",
+                                () => {
+                                    wrapper.classList.add(
+                                        "opacity-40",
+                                    );
+                                    window.draggedItem =
+                                        wrapper;
+                                },
+                            );
+                            wrapper.addEventListener(
+                                "dragend",
+                                () => {
+                                    wrapper.classList.remove(
+                                        "opacity-40",
+                                    );
+                                    window.draggedItem = null;
+                                },
+                            );
+
+                            itemsContainer.appendChild(wrapper);
+                        };
+                        reader.readAsDataURL(file);
+                    },
+                );
+            });
+
+            itemsContainer.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                const draggedItem = window.draggedItem;
+                if (!draggedItem) return;
+
+                const siblings = [
+                    ...itemsContainer.querySelectorAll(
+                        'div[draggable="true"]:not(.opacity-40)',
+                    ),
+                ];
+                const nextSibling = siblings.find((sibling) => {
+                    const box = sibling.getBoundingClientRect();
+                    return e.clientY <=
+                        box.top + box.height / 2;
+                });
+
+                if (nextSibling) {
+                    itemsContainer.insertBefore(
+                        draggedItem,
+                        nextSibling,
+                    );
+                } else {
+                    itemsContainer.appendChild(draggedItem);
+                }
+            });
+        </script>
+
+        <script src="blends.ts" type="module"></script>
+    </body>
+</html>
